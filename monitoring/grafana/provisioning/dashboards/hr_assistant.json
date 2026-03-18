@@ -1,0 +1,43 @@
+{
+  "title": "HR Assistant Dashboard",
+  "panels": [
+    {
+      "title": "Request Rate",
+      "type": "graph",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "rate(http_requests_total[1m])",
+        "legendFormat": "{{method}} {{handler}}"
+      }]
+    },
+    {
+      "title": "Request Latency (p95)",
+      "type": "graph",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+        "legendFormat": "p95 {{handler}}"
+      }]
+    },
+    {
+      "title": "Chunks Retrieved per Query",
+      "type": "graph",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "histogram_quantile(0.50, rate(hr_assistant_chunks_retrieved_bucket[5m]))",
+        "legendFormat": "median chunks"
+      }]
+    },
+    {
+      "title": "Query Errors Total",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "hr_assistant_query_errors_total",
+        "legendFormat": "errors"
+      }]
+    }
+  ],
+  "schemaVersion": 16,
+  "version": 1
+}

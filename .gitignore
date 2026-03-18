@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# Documents (terlalu besar untuk GitHub)
+documents/
+
+# Chainlit generated files
+.chainlit/
+chainlit.md
+.files/
+
+# Pytest cache
+.pytest_cache/
+
+# Docker volumes
+qdrant_data/
+
+# OS
+.DS_Store
+Thumbs.db
