@@ -1,4 +1,3 @@
-# tests/test_hybrid_search.py
 from app.hybrid_search import reciprocal_rank_fusion
 from langchain_core.documents import Document
 

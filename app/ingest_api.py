@@ -1,4 +1,3 @@
-# app/ingest_api.py
 import os
 import re
 import tempfile
@@ -22,28 +21,24 @@ def strip_frontmatter(text: str) -> str:
     return text
 
 async def ingest_file(file: UploadFile) -> dict:
-    # Validasi ekstensi
     ext = Path(file.filename).suffix.lower()
     if ext not in SUPPORTED_EXTENSIONS:
         raise ValueError(f"Unsupported file type: {ext}. Supported: {', '.join(SUPPORTED_EXTENSIONS)}")
 
-    # Simpan ke temp file
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name
 
     try:
-        # Load dokumen
+        # Load Doc
         if ext == ".pdf":
             from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(tmp_path)
             docs = loader.load()
         else:
-            # .md dan .txt
             loader = TextLoader(tmp_path, encoding="utf-8")
             docs = loader.load()
-            # Set source ke nama file asli (bukan path tmp)
             for doc in docs:
                 doc.metadata["source"] = file.filename
                 if ext == ".md":
@@ -60,7 +55,7 @@ async def ingest_file(file: UploadFile) -> dict:
         if not chunks:
             raise ValueError("No content could be extracted from the file.")
 
-        # Embed & upsert ke Qdrant (tambah ke collection yang sudah ada)
+        # Embed & upsert to Qdrant
         embeddings = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL,
             model_kwargs={"device": "cpu"}
@@ -80,4 +75,4 @@ async def ingest_file(file: UploadFile) -> dict:
         }
 
     finally:
-        os.unlink(tmp_path)  # Hapus temp file
+        os.unlink(tmp_path)

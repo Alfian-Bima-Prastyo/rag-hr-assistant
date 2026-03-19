@@ -28,7 +28,6 @@ def test_query_correct_source():
 def test_query_out_of_context():
     result = query("What is the stock price of GitLab today?")
     answer = result["answer"].lower()
-    # LLM harus jawab tidak tahu, bukan hallucinate
     assert any(phrase in answer for phrase in [
         "don't have information",
         "not in the context",

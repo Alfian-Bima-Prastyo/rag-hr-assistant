@@ -1,16 +1,15 @@
-# tests/test_ingestion.py
 import pytest
 from app.ingestion import load_documents, chunk_documents, strip_frontmatter
 
 def test_strip_frontmatter_removes_yaml():
-    text = "---\ntitle: Test\ndate: 2024\n---\nActual content here"
+    text = "---\ntitle: Test\ndate: 2024\n---\nActual content"
     result = strip_frontmatter(text)
-    assert result == "Actual content here"
+    assert result == "Actual content"
 
 def test_strip_frontmatter_no_yaml():
-    text = "No frontmatter here"
+    text = "No frontmatter"
     result = strip_frontmatter(text)
-    assert result == "No frontmatter here"
+    assert result == "No frontmatter"
 
 def test_load_documents_returns_list():
     docs = load_documents()
@@ -30,7 +29,6 @@ def test_chunk_documents_returns_chunks():
 def test_chunk_size_within_limit():
     docs = load_documents()
     chunks = chunk_documents(docs)
-    # Semua chunks harus <= chunk_size + overlap (toleransi splitter)
     for chunk in chunks:
         assert len(chunk.page_content) <= 800
 

@@ -1,4 +1,3 @@
-# app/ingestion.py
 import os
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -55,7 +54,6 @@ def index_documents():
         model_kwargs={"device": "cpu"}
     )
 
-    # Setup Qdrant collection
     client = QdrantClient(url=QDRANT_URL)
     existing = [c.name for c in client.get_collections().collections]
     if COLLECTION_NAME in existing:
@@ -68,7 +66,6 @@ def index_documents():
     )
     print(f"Collection '{COLLECTION_NAME}' created")
 
-    # Upsert via QdrantVectorStore — konsisten dengan pipeline.py
     print("Embedding and upserting chunks...")
     QdrantVectorStore.from_documents(
         documents=chunks,
