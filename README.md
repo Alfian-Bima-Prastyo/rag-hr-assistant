@@ -1,14 +1,16 @@
 # RAG HR Assistant
 
-> **Portfolio Project** — Production RAG system built with FastAPI, Qdrant, LangChain, and Docker.
-
 ---
 
 ## Overview
 
-HR Document Assistant berbasis **Retrieval-Augmented Generation (RAG)** yang menjawab pertanyaan seputar kebijakan HR GitLab menggunakan [GitLab Handbook](https://handbook.gitlab.com/) sebagai knowledge base.
+HR Document Assistant berbasis **Retrieval-Augmented Generation (RAG)** yang menjawab pertanyaan seputar kebijakan HR GitLab menggunakan dokumen dari [GitLab Handbook](https://handbook.gitlab.com/) sebagai knowledge base.
 
-Sistem ini mendukung query dalam **Bahasa Indonesia dan English** dengan automatic query translation, serta menggunakan **Hybrid Search (Vector + BM25 + RRF)** untuk retrieval yang lebih akurat.
+Fitur utama:
+- Bisa tanya dalam **Bahasa Indonesia atau English** — query otomatis ditranslate sebelum retrieval
+- **Hybrid Search** (Vector + BM25 + RRF) untuk retrieval yang lebih akurat dari vector-only
+- **Streaming response** — jawaban muncul bertahap, tidak perlu tunggu
+- **Conversation memory** — mendukung follow-up question dalam satu sesi
 
 ---
 
@@ -16,8 +18,8 @@ Sistem ini mendukung query dalam **Bahasa Indonesia dan English** dengan automat
 
 | Requirement | Status | Implementation |
 |-------------|--------|----------------|
-| FastAPI | ✅ | REST API dengan `/health`, `/chat`, `/ingest` |
-| Vector DB (Qdrant) | ✅ | 1505 chunks ter-index dengan cosine similarity |
+| FastAPI | ✅ | REST API dengan `/health`, `/chat`, `/chat/stream`, `/ingest` |
+| Vector DB (Qdrant) | ✅ | 3177 chunks ter-index dengan cosine similarity |
 | LangChain | ✅ | Pipeline, retriever, prompt template |
 | Ollama local LLM | ✅ | `qwen2.5:7b-instruct` via `langchain_ollama` |
 | Docker | ✅ | Docker Compose: FastAPI + Qdrant + Prometheus + Grafana |
@@ -25,7 +27,7 @@ Sistem ini mendukung query dalam **Bahasa Indonesia dan English** dengan automat
 | Unit testing | ✅ | 26/26 Pytest passed |
 | Monitoring | ✅ | Prometheus metrics + Grafana dashboard |
 | Hybrid Search | ✅ | BM25 + Vector + Reciprocal Rank Fusion (RRF) |
-| Chat UI | ✅ | Chainlit interface |
+| Chat UI | ✅ | Chainlit dengan streaming dan conversation memory |
 
 ---
 
@@ -34,20 +36,20 @@ Sistem ini mendukung query dalam **Bahasa Indonesia dan English** dengan automat
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    User Interface                        │
-│                  Chainlit (port 8001)                    │
+│          Chainlit (port 8001) — streaming + memory      │
 └─────────────────────┬───────────────────────────────────┘
                       │ HTTP
 ┌─────────────────────▼───────────────────────────────────┐
 │                   FastAPI (port 8000)                    │
-│         /health    /chat    /ingest    /metrics          │
+│      /health   /chat   /chat/stream   /ingest  /metrics  │
 └──────┬──────────────┬───────────────────────────────────┘
        │              │
 ┌──────▼──────┐ ┌─────▼──────────────────────────────────┐
 │   Qdrant    │ │           RAG Pipeline                   │
 │ (port 6333) │ │  1. Query Translation (ID → EN)          │
-│  1505 chunks│ │  2. Hybrid Search (Vector + BM25 + RRF)  │
-└─────────────┘ │  3. Context Assembly                     │
-                │  4. LLM Generation (Ollama)              │
+│  3177 chunks│ │  2. Hybrid Search (Vector + BM25 + RRF)  │
+└─────────────┘ │  3. Context Assembly + History           │
+                │  4. LLM Generation (Ollama) — streaming  │
                 └────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────┐
 │              Monitoring Stack                            │
@@ -59,8 +61,8 @@ Sistem ini mendukung query dalam **Bahasa Indonesia dan English** dengan automat
 
 ## Tech Stack
 
-| Komponen | Tool | Versi/Notes |
-|----------|------|-------------|
+| Komponen | Tool | Notes |
+|----------|------|-------|
 | API Framework | FastAPI | dengan uvicorn |
 | Vector DB | Qdrant | Docker: `qdrant/qdrant` |
 | Vector Store | QdrantVectorStore | `langchain_qdrant` |
@@ -71,7 +73,7 @@ Sistem ini mendukung query dalam **Bahasa Indonesia dan English** dengan automat
 | BM25 | BM25Retriever | `langchain_community.retrievers` |
 | Ollama Model | qwen2.5:7b-instruct | local, port 11434 |
 | Monitoring | Prometheus + Grafana | metrics via `/metrics` endpoint |
-| Chat UI | Chainlit | terhubung ke FastAPI |
+| Chat UI | Chainlit | streaming + conversation memory |
 | Testing | Pytest | 26/26 passed |
 | Containerization | Docker Compose | FastAPI + Qdrant + Prometheus + Grafana |
 
@@ -82,22 +84,27 @@ Sistem ini mendukung query dalam **Bahasa Indonesia dan English** dengan automat
 ```
 HR-Assistant/
 ├── app/
-│   ├── config.py           # Konfigurasi (URL, model, chunk size)
-│   ├── ingestion.py        # Pipeline ingestion dokumen
-│   ├── pipeline.py         # RAG pipeline + query translation
-│   ├── ingest_api.py       # Handler untuk /ingest endpoint
-│   └── main.py             # FastAPI app + Prometheus metrics
+│   ├── config.py              # Konfigurasi (URL, model, chunk size)
+│   ├── ingestion.py           # Pipeline ingestion dokumen
+│   ├── pipeline.py            # RAG pipeline + query translation + streaming
+│   ├── hybrid_search.py       # BM25 + Vector + RRF implementation
+│   ├── ingest_api.py          # Handler untuk /ingest endpoint
+│   └── main.py                # FastAPI app + Prometheus metrics
 ├── documents/
-│   └── people-group/       # GitLab Handbook (70 files, 1505 chunks)
+│   ├── people-group/          # HR policies, onboarding, offboarding
+│   ├── hiring/                # Interview process, talent acquisition
+│   ├── leadership/            # 1-1, underperformance, coaching
+│   ├── total-rewards/         # Compensation, benefits, stock options
+│   └── communication/         # Confidentiality levels, async communication
 ├── tests/
-│   ├── test_api.py         # Test endpoint FastAPI
-│   ├── test_ingestion.py   # Test ingestion pipeline
-│   ├── test_pipeline.py    # Test retrieval & generation
-│   └── test_hybrid_search.py # Test RRF algorithm
+│   ├── test_api.py            # Test endpoint FastAPI
+│   ├── test_ingestion.py      # Test ingestion pipeline
+│   ├── test_pipeline.py       # Test retrieval & generation
+│   └── test_hybrid_search.py  # Test RRF algorithm
 ├── monitoring/
-│   ├── prometheus.yml      # Prometheus scrape config
-│   └── grafana/            # Grafana provisioning
-├── chainlit_app.py         # Chainlit UI
+│   ├── prometheus.yml         # Prometheus scrape config
+│   └── grafana/               # Grafana provisioning + dashboard
+├── chainlit_app.py            # Chainlit UI
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -114,8 +121,8 @@ HR-Assistant/
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/username/hr-assistant.git
-cd hr-assistant
+git clone https://github.com/Alfian-Bima-Prastyo/rag-hr-assistant.git
+cd rag-hr-assistant
 ```
 
 ### 2. Jalankan Ollama
@@ -128,6 +135,11 @@ ollama run qwen2.5:7b-instruct
 docker compose up --build
 ```
 
+Tunggu sampai muncul:
+```
+hr-assistant | Ingestion complete — 3177 chunks indexed
+hr-assistant | Application startup complete.
+```
 
 ### 4. Jalankan Chat UI (terminal terpisah)
 ```bash
@@ -169,6 +181,9 @@ curl -X POST http://localhost:8000/chat \
 }
 ```
 
+### POST /chat/stream
+Server-Sent Events endpoint untuk streaming response. Digunakan oleh Chainlit UI.
+
 ### POST /ingest
 ```bash
 curl -X POST http://localhost:8000/ingest \
@@ -187,31 +202,36 @@ curl -X POST http://localhost:8000/ingest \
 ## RAG Pipeline Details
 
 ### Knowledge Base
-- **Source**: [GitLab Handbook](https://handbook.gitlab.com/) — folder `people-group`
+- **Source**: [GitLab Handbook](https://handbook.gitlab.com/)
 - **License**: Creative Commons — legal untuk portofolio non-komersial
-- **Total files**: 70 markdown files
-- **Total chunks**: 1505 chunks
+- **Total files**: 142 markdown files
+- **Total chunks**: 3177 chunks
+- **Folders**: people-group, hiring, leadership, total-rewards, communication
 
 ### Chunking Strategy
 ```python
 RecursiveCharacterTextSplitter(
-    chunk_size=1200,      # Ditentukan berdasarkan analisis dokumen:
-    chunk_overlap=200,    # rata-rata section GitLab Handbook ~800-1500 karakter
+    chunk_size=1200,
+    chunk_overlap=200,
     separators=["\n## ", "\n### ", "\n\n", "\n", " "]
 )
 ```
-> **Insight**: Chunk size 1200 dipilih berdasarkan analisis struktur dokumen GitLab Handbook yang memiliki rata-rata section sekitar 800-1500 karakter. Jika menggunakan chunk kecil akan menghasilkan context yang tidak lengkap; c
 
+ Chunk size 1200 dipilih berdasarkan analisis struktur dokumen GitLab Handbook yang memiliki rata-rata section sekitar 800-1500 karakter. Jika menggunakan chunk kecil akan menghasilkan context yang tidak lengkap.
+ 
 ### Hybrid Search (RRF)
 ```
 Query → Vector Search (Qdrant) ──┐
-                                  ├── RRF Fusion → Top 5 chunks
+                                  ├── RRF Fusion → Top 7 chunks
 Query → BM25 Search ─────────────┘
 ```
 Reciprocal Rank Fusion score: `1 / (k + rank + 1)` untuk setiap list, dan kemudian dijumlahkan.
 
 ### Bilingual Support
-Query dalam Bahasa Indonesia diterjemahkan ke English sebelum retrieval, kemudian LLM menjawab dalam bahasa asli pertanyaan.
+Query Bahasa Indonesia ditranslate ke English sebelum retrieval menggunakan LLM, lalu jawaban digenerate dalam bahasa asli pertanyaan.
+
+### Conversation Memory
+History percakapan disimpan per session di Chainlit (max 5 turn terakhir) dan dikirim ke pipeline sebagai context tambahan. Ini memungkinkan follow-up question tanpa perlu repeat context.
 
 ---
 
@@ -248,13 +268,13 @@ tests/test_hybrid_search.py::test_rrf_boosts_overlap PASSED
 
 ## Known Limitations
 
-| Issue | Status | Notes |
-|-------|--------|-------|
-| Query broad ("what should I do") kurang akurat | Known | Query spesifik memberikan hasil lebih baik |
-| Knowledge base hanya terbatas folder `people-group` | Planned | Akan ditambahkan folder lain (hiring, total-rewards) |
+| Issue | Notes |
+|-------|-------|
+| Broad/generic query kadang tidak retrieve dokumen yang tepat | Query spesifik memberikan hasil lebih baik. Contoh: "What are warning signs of underperformance?" lebih akurat dari "How does GitLab manage underperformance?" |
+| Knowledge base hanya GitLab Handbook | Dataset ini dipilih karena lisensi Creative Commons — legal untuk portofolio non-komersial |
 
 ---
 
 ## License
 
-Dataset: [GitLab Handbook](https://handbook.gitlab.com/) — Creative Commons License
+Dataset dari [GitLab Handbook](https://handbook.gitlab.com/), digunakan untuk keperluan non-komersial (Creative Commons).
