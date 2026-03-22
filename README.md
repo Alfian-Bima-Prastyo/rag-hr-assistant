@@ -264,6 +264,17 @@ tests/test_hybrid_search.py::test_rrf_boosts_overlap PASSED
 ... 26 passed
 ```
 
+## Evaluation (RAGAS)
+
+RAG pipeline dievaluasi menggunakan RAGAS dengan 5 test cases dan `qwen2.5:7b-instruct` sebagai evaluator.
+
+| Metrik | Score |
+|--------|-------|
+| **Faithfulness** | 0.97 | 
+| **Answer Relevancy** | 0.96 |
+| **Context Precision** | 0.68 |
+| **Context Recall** | 0.75 | 
+
 ---
 
 ## Known Limitations
