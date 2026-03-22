@@ -100,13 +100,15 @@ HR-Assistant/
 │   ├── test_api.py            # Test endpoint FastAPI
 │   ├── test_ingestion.py      # Test ingestion pipeline
 │   ├── test_pipeline.py       # Test retrieval & generation
-│   └── test_hybrid_search.py  # Test RRF algorithm
+│   ├── test_hybrid_search.py  # Test RRF algorithm
+|   └── test_ragas.py          # RAGAS evaluation — faithfulness, relevancy, recal
 ├── monitoring/
 │   ├── prometheus.yml         # Prometheus scrape config
 │   └── grafana/               # Grafana provisioning + dashboard
 ├── chainlit_app.py            # Chainlit UI
 ├── Dockerfile
 ├── docker-compose.yml
+├── ragas_results.json
 └── requirements.txt
 ```
 
