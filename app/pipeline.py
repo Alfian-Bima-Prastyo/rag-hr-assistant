@@ -34,11 +34,6 @@ If it is already in English, return it as is. Return ONLY the translated questio
 Question: {question}
 Translation:""")
 
-EXPANSION_PROMPT = PromptTemplate.from_template("""Given this question, generate 2 alternative search queries that mean the same thing but use different words. Return only the queries, one per line, no numbering, no explanation.
-
-Question: {question}
-Alternative queries:""")
-
 CONVERSATION_PROMPT = PromptTemplate.from_template("""You are a helpful HR assistant for GitLab.
 
 Answer the question ONLY based on the context provided below.
@@ -85,48 +80,28 @@ def load_pipeline():
 
     translation_chain = TRANSLATION_PROMPT | llm | StrOutputParser()
     generation_chain = GENERATION_PROMPT | llm | StrOutputParser()
-    expansion_chain = EXPANSION_PROMPT | llm | StrOutputParser()  
 
     print("Hybrid pipeline ready.")
-    return retriever, translation_chain, generation_chain, expansion_chain, llm
+    return retriever, translation_chain, generation_chain, llm
 
-retriever, translation_chain, generation_chain, expansion_chain, llm = load_pipeline()
+retriever, translation_chain, generation_chain, llm = load_pipeline()
 
 def query(question: str) -> dict:
     try:
-        # Translate 
         translated = translation_chain.invoke({"question": question}).strip()
+        logger.info(f"Translated query: {translated}")
+        docs = retriever.invoke(translated)
         
-        # Generate alternative queries
-        alternatives_raw = expansion_chain.invoke({"question": translated}).strip()
-        alternative_queries = [q.strip() for q in alternatives_raw.split("\n") if q.strip()]
-        all_queries = [translated] + alternative_queries[:2]
-        
-        logger.info(f"Queries: {all_queries}")
-        
-        all_docs = []
-        for q in all_queries:
-            docs = retriever.invoke(q)
-            all_docs.append(docs)
-        
-        from app.hybrid_search import reciprocal_rank_fusion
-        if len(all_docs) > 1:
-            fused = reciprocal_rank_fusion(all_docs[0], all_docs[1], top_n=7)
-            for extra in all_docs[2:]:
-                fused = reciprocal_rank_fusion(fused, extra, top_n=7)
-        else:
-            fused = all_docs[0]
-        
-        context = "\n\n".join([d.page_content for d in fused])
-        sources = list(set([d.metadata.get("source", "") for d in fused]))
+        context = "\n\n".join([d.page_content for d in docs])
+        sources = list(set([d.metadata.get("source", "") for d in docs]))
         answer = generation_chain.invoke({"context": context, "question": question})
         
-        return {"answer": answer, "sources": sources, "num_chunks": len(fused)}
+        return {"answer": answer, "sources": sources, "num_chunks": len(docs)}
     except Exception as e:
         logger.error(f"Pipeline error: {e}")
         return {"answer": "Sorry, an error occurred. Please try again.",
                 "sources": [], "num_chunks": 0}
-
+    
 async def query_stream(question: str, history: list = []) -> AsyncGenerator[str, None]:
     try:
         # Format history

@@ -16,7 +16,6 @@ def test_rrf_boosts_overlap():
     vector_docs = [shared, make_doc("only in vector")]
     bm25_docs = [shared, make_doc("only in bm25")]
     result = reciprocal_rank_fusion(vector_docs, bm25_docs, top_n=3)
-    # shared doc harus di posisi pertama karena ada di kedua list
     assert result[0].page_content == "shared document"
 
 def test_rrf_top_n_limit():
