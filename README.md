@@ -1,5 +1,6 @@
 ---
 title: HR Assistant API
+emoji: 🤖
 colorFrom: blue
 colorTo: green
 sdk: docker
