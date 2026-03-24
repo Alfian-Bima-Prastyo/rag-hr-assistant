@@ -52,16 +52,13 @@ Context:
 Question: {question}
 
 Answer:""")
-
 def load_pipeline():
-    """Initialize hybrid retriever and LLM once at startup."""
     print("Loading embedding model...")
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL, model_kwargs={"device": "cpu"}
     )
 
     print("Connecting to Qdrant...")
-    # client = QdrantClient(url=QDRANT_URL)
     client = QdrantClient(
         url=QDRANT_URL,
         api_key=QDRANT_API_KEY if QDRANT_API_KEY else None
@@ -70,18 +67,38 @@ def load_pipeline():
         client=client, collection_name=COLLECTION_NAME, embedding=embeddings
     )
 
-    print("Loading chunks for BM25 index...")
-    from app.ingestion import load_documents, chunk_documents
-    docs = load_documents()
-    chunks = chunk_documents(docs)
+    print("Loading chunks from Qdrant for BM25 index...")
+    # Ganti load dari documents/ dengan scroll dari Qdrant
+    all_points = []
+    offset = None
+    while True:
+        result, offset = client.scroll(
+            collection_name=COLLECTION_NAME,
+            limit=500,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False
+        )
+        all_points.extend(result)
+        if offset is None:
+            break
+
+    from langchain_core.documents import Document
+    chunks = [
+        Document(
+            page_content=point.payload.get("page_content", ""),
+            metadata=point.payload.get("metadata", {})
+        )
+        for point in all_points
+        if point.payload.get("page_content")
+    ]
+    print(f"Loaded {len(chunks)} chunks from Qdrant for BM25")
 
     print("Building hybrid retriever...")
     retriever = HybridRetriever(vector_store=vector_store, chunks=chunks, top_k=20)
 
     print("Loading LLM...")
-    # llm = OllamaLLM(
-    #     model=OLLAMA_MODEL, base_url=OLLAMA_URL, temperature=0.3
-    # )
+    from langchain_groq import ChatGroq
     llm = ChatGroq(
         model=GROQ_MODEL,
         api_key=GROQ_API_KEY,

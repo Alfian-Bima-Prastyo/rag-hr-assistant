@@ -1,3 +1,11 @@
+---
+title: HR Assistant API
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # RAG HR Assistant
 
 ---

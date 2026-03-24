@@ -84,7 +84,6 @@ def index_documents():
         collection_name=COLLECTION_NAME,
         embedding=embeddings
     )
-    vector_store.add_documents(chunks)
 
     batch_size = 50
     total = len(chunks)
