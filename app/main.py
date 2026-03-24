@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Histogram, Counter
 import json
-from app.config import QDRANT_URL, COLLECTION_NAME
+from app.config import *
 
 app = FastAPI(title="GitLab Handbook HR Assistant")
 
@@ -48,7 +48,11 @@ class ChatRequest(BaseModel):
 def health():
     from qdrant_client import QdrantClient
     try:
-        client = QdrantClient(url=QDRANT_URL)
+        # client = QdrantClient(url=QDRANT_URL)
+        client = QdrantClient(
+            url=QDRANT_URL,
+            api_key=QDRANT_API_KEY if QDRANT_API_KEY else None
+        )
         collections = [c.name for c in client.get_collections().collections]
         return {"status": "ok", "qdrant": "connected", "collections": collections}
     except Exception as e:
@@ -78,8 +82,8 @@ async def ingest(file: UploadFile = File(...)):
     
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
-    from app.pipeline import query_stream
+    from app.pipeline import query_stream_agentic
     return StreamingResponse(
-        query_stream(request.question, request.history),
+        query_stream_agentic(request.question, request.history),
         media_type="text/event-stream"
     )

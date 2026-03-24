@@ -54,7 +54,12 @@ def index_documents():
         model_kwargs={"device": "cpu"}
     )
 
-    client = QdrantClient(url=QDRANT_URL)
+    # client = QdrantClient(url=QDRANT_URL)
+    client = QdrantClient(
+        url=QDRANT_URL,
+        api_key=QDRANT_API_KEY if QDRANT_API_KEY else None,
+        timeout = 60
+    )
     existing = [c.name for c in client.get_collections().collections]
     if COLLECTION_NAME in existing:
         client.delete_collection(COLLECTION_NAME)
@@ -66,16 +71,30 @@ def index_documents():
     )
     print(f"Collection '{COLLECTION_NAME}' created")
 
+    # print("Embedding and upserting chunks...")
+    # QdrantVectorStore.from_documents(
+    #     documents=chunks,
+    #     embedding=embeddings,
+    #     client=client,
+    #     collection_name=COLLECTION_NAME,
+    # )
     print("Embedding and upserting chunks...")
-    QdrantVectorStore.from_documents(
-        documents=chunks,
-        embedding=embeddings,
-        url=QDRANT_URL,
+    vector_store = QdrantVectorStore(
+        client=client,
         collection_name=COLLECTION_NAME,
+        embedding=embeddings
     )
+    vector_store.add_documents(chunks)
 
-    print(f"Ingestion complete — {len(chunks)} chunks indexed")
-    return len(chunks)
+    batch_size = 50
+    total = len(chunks)
+    for i in range(0, total, batch_size):
+        batch = chunks[i:i + batch_size]
+        vector_store.add_documents(batch)
+        print(f"Uploaded {min(i + batch_size, total)}/{total} chunks")
+
+    print(f"Ingestion complete — {total} chunks indexed")
+    return total
 
 if __name__ == "__main__":
     index_documents()

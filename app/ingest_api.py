@@ -59,7 +59,11 @@ async def ingest_file(file: UploadFile) -> dict:
             model_name=EMBEDDING_MODEL,
             model_kwargs={"device": "cpu"}
         )
-        client = QdrantClient(url=QDRANT_URL)
+        # client = QdrantClient(url=QDRANT_URL)
+        client = QdrantClient(
+            url=QDRANT_URL,
+            api_key=QDRANT_API_KEY if QDRANT_API_KEY else None
+        )
         vector_store = QdrantVectorStore(
             client=client,
             collection_name=COLLECTION_NAME,

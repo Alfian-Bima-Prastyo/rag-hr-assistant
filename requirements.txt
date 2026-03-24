@@ -14,3 +14,4 @@ torch
 prometheus-fastapi-instrumentator
 rank-bm25
 chainlit
+python-dotenv
