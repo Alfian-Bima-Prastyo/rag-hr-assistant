@@ -33,9 +33,8 @@ Fitur utama:
 
 ## Architecture
 
-```
-![RAG Architecture](diagrams/rag-pipeline.svg)
-```
+![RAG Architecture](diagrams/rag-pipeline.png)
+
 
 ---
 
