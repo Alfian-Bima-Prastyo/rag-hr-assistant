@@ -3,8 +3,13 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Histogram, Counter
-import json
+from qdrant_client import QdrantClient
+from app.ingest_api import ingest_file
+from app.pipeline import query
+from app.pipeline import query_stream
 from app.config import QDRANT_URL, COLLECTION_NAME
+
+import json
 
 app = FastAPI(title="GitLab Handbook HR Assistant")
 
@@ -46,7 +51,6 @@ class ChatRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    from qdrant_client import QdrantClient
     try:
         client = QdrantClient(url=QDRANT_URL)
         collections = [c.name for c in client.get_collections().collections]
@@ -56,7 +60,6 @@ def health():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    from app.pipeline import query
     result = query(request.question)
     # Record metrics
     CHUNKS_RETRIEVED.observe(result["num_chunks"])
@@ -66,7 +69,6 @@ def chat(request: ChatRequest):
 
 @app.post("/ingest", response_model=IngestResponse)
 async def ingest(file: UploadFile = File(...)):
-    from app.ingest_api import ingest_file
     try:
         result = await ingest_file(file)
         INGEST_CHUNKS.observe(result["chunks_indexed"])
@@ -78,7 +80,6 @@ async def ingest(file: UploadFile = File(...)):
     
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
-    from app.pipeline import query_stream
     return StreamingResponse(
         query_stream(request.question, request.history),
         media_type="text/event-stream"

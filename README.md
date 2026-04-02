@@ -34,27 +34,7 @@ Fitur utama:
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    User Interface                        │
-│          Chainlit (port 8001) — streaming + memory      │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTP
-┌─────────────────────▼───────────────────────────────────┐
-│                   FastAPI (port 8000)                    │
-│      /health   /chat   /chat/stream   /ingest  /metrics  │
-└──────┬──────────────┬───────────────────────────────────┘
-       │              │
-┌──────▼──────┐ ┌─────▼──────────────────────────────────┐
-│   Qdrant    │ │           RAG Pipeline                   │
-│ (port 6333) │ │  1. Query Translation (ID → EN)          │
-│  3177 chunks│ │  2. Hybrid Search (Vector + BM25 + RRF)  │
-└─────────────┘ │  3. Context Assembly + History           │
-                │  4. LLM Generation (Ollama) — streaming  │
-                └────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────┐
-│              Monitoring Stack                            │
-│     Prometheus (port 9090) + Grafana (port 3000)        │
-└─────────────────────────────────────────────────────────┘
+![RAG Architecture](diagrams/rag-pipeline.svg)
 ```
 
 ---

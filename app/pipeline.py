@@ -6,6 +6,7 @@ from langchain_core.output_parsers import StrOutputParser
 from typing import AsyncGenerator
 from qdrant_client import QdrantClient
 from app.config import *
+from app.ingestion import load_documents, chunk_documents
 from app.hybrid_search import HybridRetriever
 import logging
 import json
@@ -66,7 +67,6 @@ def load_pipeline():
     )
 
     print("Loading chunks for BM25 index...")
-    from app.ingestion import load_documents, chunk_documents
     docs = load_documents()
     chunks = chunk_documents(docs)
 
